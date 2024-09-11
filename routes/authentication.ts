@@ -3,6 +3,7 @@ import dbConnection from '../db/connection'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcrypt'
 import dotenv from 'dotenv'
+import { enviarEmail } from '../mail/emailConfig'
 
 dotenv.config()
 
@@ -78,7 +79,6 @@ router.post('/registro', async (req: Request, res: Response) => {
   }
 })
 
-
 // Rota de login
 router.post('/login', async (req: Request, res: Response) => {
   try {
@@ -104,7 +104,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
     // Verificar o código de verificação
     if (codigoVerificacao !== user.codigoverificacao) {
-      return res.status(401).json({ message: 'Código de verificação incorreto', codigoVerificacao: user.codigoverificacao })
+      return res.status(401).json({ message: 'Código de verificação incorreto', codigoVerificacao: user.codigoverificacao });
     }
 
     // Gerar novo token JWT
@@ -119,21 +119,60 @@ router.post('/login', async (req: Request, res: Response) => {
       [token, user.id]
     );
 
-    res.status(200).json({ token });
-
     // Adicionar o token ao cabeçalho da resposta
     res.setHeader('Authorization', `Bearer ${token}`);
 
-    // Enviar a resposta com o token no corpo também
-    res.status(200).json({ token });
+    // Enviar a resposta com o token no corpo
+    return res.status(200).json({ token });
 
   } catch (error) {
     console.error('Erro ao fazer login:', error);
     res.status(500).json({ message: 'Erro ao fazer login' });
   }
-});
+})
 
+// Rota para recuperação de conta
+router.post('/recovery', async (req: Request, res: Response) => {
+  try {
+    const { email, gerarNovoCodigo } = req.body;
 
+    // Verificar se o usuário existe
+    const userQuery = await dbConnection.query(
+      'SELECT * FROM Login_Usuario WHERE email = $1',
+      [email]
+    );
+
+    if (userQuery.rows.length === 0) {
+      return res.status(404).json({ message: 'Usuário não encontrado' })
+    }
+
+    const user = userQuery.rows[0];
+
+    if (gerarNovoCodigo === 1) {
+      // Gerar novo código de verificação
+      const novoCodigo = Math.floor(100000 + Math.random() * 900000).toString()
+
+      // Atualizar o código de verificação no banco de dados
+      await dbConnection.query(
+        'UPDATE Login_Usuario SET codigoverificacao = $1 WHERE id = $2',
+        [novoCodigo, user.id]
+      );
+
+      // Aqui você pode adicionar lógica para enviar o novo código por e-mail
+
+      enviarEmail(email, 'Recuperação de conta', `Seu código de verificação é: ${novoCodigo}`)
+
+      // Fim das config de email
+
+      res.status(200).json({ message: 'Novo código de verificação gerado e enviado' })
+    } else {
+      res.status(200).json({ message: 'Utilize o código de verificação existente' })
+    }
+  } catch (error) {
+    console.error('Erro ao recuperar conta:', error);
+    res.status(500).json({ message: 'Erro ao processar a recuperação de conta' })
+  }
+})
 
 // Exportar o router
 
