@@ -11,7 +11,6 @@ const router = Router()
 const secretKey = process.env.JWT_SECRET // Certifique-se de definir JWT_SECRET no seu arquivo .env
 
 // Rotas de autenticação - Registro
-
 router.post('/registro', async (req: Request, res: Response) => {
   const { email, password, nivelUsuario, idCliente, idEmpresa, nickname, nomeReal, dataNasc } = req.body
 
@@ -64,7 +63,7 @@ router.post('/registro', async (req: Request, res: Response) => {
     if (!secretKey) {
       throw new Error('JWT_SECRET não está definido')
     }
-    const token = jwt.sign({ id: userId }, secretKey, { expiresIn: '1h' })
+    const token = jwt.sign({ id: userId }, secretKey) // Removida a opção expiresIn
 
     // Atualizar o token na tabela Login_Usuario
     await dbConnection.query(
@@ -111,7 +110,7 @@ router.post('/login', async (req: Request, res: Response) => {
     if (!secretKey) {
       throw new Error('JWT_SECRET não está definido');
     }
-    const token = jwt.sign({ id: user.id }, secretKey, { expiresIn: '1h' });
+    const token = jwt.sign({ id: user.id }, secretKey); // Removida a opção expiresIn
 
     // Atualizar o token na tabela Login_Usuario
     await dbConnection.query(

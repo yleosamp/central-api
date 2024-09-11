@@ -1,8 +1,8 @@
 // Importações
 import express, { Request, Response } from 'express'
 import dotenv from 'dotenv'
-const app = express()
 import createTables from './db/createTables'
+const app = express()
 
 dotenv.config() // Utilizando o dotenv para carregar as variáveis de ambiente
 
@@ -13,9 +13,11 @@ app.use(express.json())
 // Usar os roteadores
 import startedRouter from './routes/started'
 import authenticationRouter from './routes/authentication'
+import accountManagementRouter from './routes/accountManagement'
 
 app.use('/api/', startedRouter)
 app.use('/api/autenticacao', authenticationRouter)
+app.use('/api/accountManagement', accountManagementRouter)
 
 // Rotas para verificação
 app.get('/rodando', (req: Request, res: Response): void => {
