@@ -2,6 +2,7 @@
 import express, { Request, Response } from 'express'
 import dotenv from 'dotenv'
 const app = express()
+import createTables from './db/createTables'
 
 dotenv.config() // Utilizando o dotenv para carregar as variáveis de ambiente
 
@@ -24,4 +25,5 @@ app.get('/rodando', (req: Request, res: Response): void => {
 // Inicializar o servidor
 app.listen(port, (): void => {
   console.log(`Servidor iniciado com sucesso na porta ${port}`)
+  createTables()
 })
