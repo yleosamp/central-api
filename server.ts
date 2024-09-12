@@ -14,10 +14,12 @@ app.use(express.json())
 import startedRouter from './routes/started'
 import authenticationRouter from './routes/authentication'
 import accountManagementRouter from './routes/accountManagement'
+import businessManagementRouter from './routes/businessManagement'
 
 app.use('/api/', startedRouter)
 app.use('/api/autenticacao', authenticationRouter)
 app.use('/api/accountManagement', accountManagementRouter)
+app.use('/api/businessManagement', businessManagementRouter)
 
 // Rotas para verificação
 app.get('/rodando', (req: Request, res: Response): void => {

@@ -133,13 +133,13 @@ router.post('/login', async (req: Request, res: Response) => {
 // Rota para recuperação de conta
 router.post('/recovery', async (req: Request, res: Response) => {
   try {
-    const { email, gerarNovoCodigo } = req.body;
+    const { email, codigo, novaSenha } = req.body;
 
     // Verificar se o usuário existe
     const userQuery = await dbConnection.query(
       'SELECT * FROM Login_Usuario WHERE email = $1',
       [email]
-    );
+    )
 
     if (userQuery.rows.length === 0) {
       return res.status(404).json({ message: 'Usuário não encontrado' })
@@ -147,7 +147,7 @@ router.post('/recovery', async (req: Request, res: Response) => {
 
     const user = userQuery.rows[0];
 
-    if (gerarNovoCodigo === 1) {
+    if (codigo === null) {
       // Gerar novo código de verificação
       const novoCodigo = Math.floor(100000 + Math.random() * 900000).toString()
 
@@ -157,15 +157,30 @@ router.post('/recovery', async (req: Request, res: Response) => {
         [novoCodigo, user.id]
       );
 
-      // Aqui você pode adicionar lógica para enviar o novo código por e-mail
-
-      enviarEmail(email, 'Recuperação de conta', `Seu código de verificação é: ${novoCodigo}`)
-
-      // Fim das config de email
+      // Enviar o novo código por e-mail
+      await enviarEmail(email, 'Recuperação de conta', `Seu código de verificação é: ${novoCodigo}`)
 
       res.status(200).json({ message: 'Novo código de verificação gerado e enviado' })
     } else {
-      res.status(200).json({ message: 'Utilize o código de verificação existente' })
+      // Verificar se o código fornecido está correto
+      if (codigo !== user.codigoverificacao) {
+        return res.status(400).json({ message: 'Código de verificação incorreto' })
+      }
+
+      if (!novaSenha) {
+        return res.status(400).json({ message: 'Nova senha não fornecida' })
+      }
+
+      // Criptografar a nova senha
+      const hashedPassword = await bcrypt.hash(novaSenha, 10)
+
+      // Atualizar a senha no banco de dados
+      await dbConnection.query(
+        'UPDATE Login_Usuario SET password = $1, codigoverificacao = NULL WHERE id = $2',
+        [hashedPassword, user.id]
+      );
+
+      res.status(200).json({ message: 'Senha atualizada com sucesso' })
     }
   } catch (error) {
     console.error('Erro ao recuperar conta:', error);
