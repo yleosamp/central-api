@@ -19,7 +19,7 @@ export const enviarEmail = async (para: string, assunto: string, corpo: string) 
       from: process.env.EMAIL_FROM,
       to: para,
       subject: assunto,
-      text: corpo,
+      html: corpo,
     });
     console.log('E-mail enviado com sucesso');
   } catch (erro) {

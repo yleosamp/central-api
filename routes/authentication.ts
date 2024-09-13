@@ -158,7 +158,79 @@ router.post('/recovery', async (req: Request, res: Response) => {
       );
 
       // Enviar o novo código por e-mail
-      await enviarEmail(email, 'Recuperação de conta', `Seu código de verificação é: ${novoCodigo}`)
+      const corpoHtml = `
+      <html>
+        <head>
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+          <style>
+            .container {
+              font-family: "Montserrat", sans-serif;
+              border: 1px solid #ddd;
+              border-radius: 8px;
+              padding: 20px;
+              max-width: 600px;
+              margin: auto;
+            }
+            .header {
+              background-color: #4ECB71;
+              color: #1D4A2A;
+              padding: 10px;
+              text-align: center;
+              border-radius: 8px 8px 0 0;
+            }
+            .header h1 {
+              margin: 0;
+            }
+            .content {
+              margin: 20px 0;
+              text-align: center;
+            }
+            .code {
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              margin: 0 auto;
+              width: fit-content;
+              gap: 20px;
+            }
+            .code div {
+              background-color: #f0f0f0;
+              padding: 15px;
+              border-radius: 4px;
+              font-size: 24px;
+              font-weight: bold;
+              margin-block: 10px;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 20px;
+              font-size: 12px;
+              color: #888;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Central da Resenha</h1>
+            </div>
+            <div class="content">
+              <p>Olá <strong>${email}</strong>, este é o seu código de autenticação:</p>
+              <div class="code">
+                ${novoCodigo.split('').map(num => `<div>${num}</div>`).join('')}
+              </div>
+            </div>
+            <div class="footer">
+              <p>Para mais informações entre em contato com: suporte@centraldaresenha.com.br</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+      await enviarEmail(email, 'Recuperação de conta', corpoHtml)
 
       res.status(200).json({ message: 'Novo código de verificação gerado e enviado' })
     } else {
