@@ -201,7 +201,7 @@ router.post('/recovery', async (req: Request, res: Response) => {
               border-radius: 4px;
               font-size: 24px;
               font-weight: bold;
-              margin-block: 10px;
+              margin: 5px;
             }
             .footer {
               text-align: center;
