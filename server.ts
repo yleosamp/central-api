@@ -15,11 +15,13 @@ import startedRouter from './routes/started'
 import authenticationRouter from './routes/authentication'
 import accountManagementRouter from './routes/accountManagement'
 import businessManagementRouter from './routes/businessManagement'
+import fieldScheduleRouter from './routes/fieldSchedule'
 
 app.use('/api/', startedRouter)
 app.use('/api/autenticacao', authenticationRouter)
 app.use('/api/accountManagement', accountManagementRouter)
 app.use('/api/businessManagement', businessManagementRouter)
+app.use('/api/schedule', fieldScheduleRouter)
 
 // Rotas para verificação
 app.get('/rodando', (req: Request, res: Response): void => {

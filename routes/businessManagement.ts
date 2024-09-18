@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { Request, Response } from 'express';
 import dbConnection from '../db/connection';
 import { authMiddleware } from '../middlewares/verifyTokenInHeader';
+import { JwtPayload } from 'jsonwebtoken';
 
 const router = Router()
 
@@ -9,11 +10,26 @@ const router = Router()
 // TESTAR A ROTA
 
 // Rota para adicionar informações da empresa
-router.post('/informacoes', authMiddleware, async (req: Request, res: Response) => {
+// Rota para atualizar informações da empresa
+router.put('/update-empresa', authMiddleware, async (req: Request, res: Response) => {
   try {
     if (!req.userAuthenticated) {
       return res.status(401).json({ message: 'Usuário não autenticado' });
     }
+    const userId = (req.userAuthenticated as JwtPayload).id;
+
+    // Buscar o idEmpresa associado ao usuário logado
+    const userQuery = await dbConnection.query(
+      'SELECT idEmpresa FROM Login_Usuario WHERE id = $1',
+      [userId]
+    );
+
+    if (userQuery.rows.length === 0 || !userQuery.rows[0].idempresa) {
+      return res.status(404).json({ message: 'Empresa não encontrada para este usuário' });
+    }
+
+    const idEmpresa = userQuery.rows[0].idempresa;
+
     const {
       nome,
       endereco,
@@ -29,41 +45,33 @@ router.post('/informacoes', authMiddleware, async (req: Request, res: Response) 
       CNPJ
     } = req.body;
 
-    const query = `
-      INSERT INTO Empresa_Info (
-        nome, endereco, cidade, enderecoMaps, precoMedio, totalSemanal,
-        imagemBanner, imagemAvatar, horarioFuncionamento, abertoFechado,
-        nivelEmpresa, CNPJ
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      RETURNING id
+    // Atualizar as informações da empresa
+    const updateQuery = `
+      UPDATE Empresa_Info
+      SET nome = $1, endereco = $2, cidade = $3, enderecoMaps = $4,
+          precoMedio = $5, totalSemanal = $6, imagemBanner = $7,
+          imagemAvatar = $8, horarioFuncionamento = $9, abertoFechado = $10,
+          nivelEmpresa = $11, CNPJ = $12
+      WHERE id = $13
+      RETURNING *
     `;
 
-    const values = [
-      nome,
-      endereco,
-      cidade,
-      enderecoMaps,
-      precoMedio,
-      totalSemanal,
-      imagemBanner,
-      imagemAvatar,
-      horarioFuncionamento,
-      abertoFechado,
-      nivelEmpresa,
-      CNPJ
-    ];
+    const updatedEmpresa = await dbConnection.query(updateQuery, [
+      nome, endereco, cidade, enderecoMaps, precoMedio, totalSemanal,
+      imagemBanner, imagemAvatar, horarioFuncionamento, abertoFechado,
+      nivelEmpresa, CNPJ, idEmpresa
+    ]);
 
-    const result = await dbConnection.query(query, values);
-
-    if (result.rows.length > 0) {
-      res.status(201).json({ message: 'Empresa adicionada com sucesso', id: result.rows[0].id });
-    } else {
-      res.status(400).json({ message: 'Falha ao adicionar empresa' });
+    if (updatedEmpresa.rows.length === 0) {
+      return res.status(404).json({ message: 'Falha ao atualizar informações da empresa' });
     }
+
+    res.status(200).json({ message: 'Informações da empresa atualizadas com sucesso', empresa: updatedEmpresa.rows[0] });
   } catch (error) {
-    console.error('Erro ao adicionar empresa:', error);
-    res.status(500).json({ message: 'Erro interno do servidor' });
+    console.error('Erro ao atualizar informações da empresa:', error);
+    res.status(500).json({ message: 'Erro ao atualizar informações da empresa' });
   }
 });
+
 
 export default router

@@ -13,6 +13,7 @@ const secretKey = process.env.JWT_SECRET // Certifique-se de definir JWT_SECRET 
 // Rotas de autenticação - Registro
 router.post('/registro', async (req: Request, res: Response) => {
   const { email, password, nivelUsuario, idCliente, idEmpresa, nickname, nomeReal, dataNasc } = req.body
+  const { nome, endereco, cidade, enderecoMaps, precoMedio, totalSemanal, imagemBanner, imagemAvatar, horarioFuncionamento, abertoFechado, nivelEmpresa, CNPJ } = req.body
 
   try {
     // Verificar se o usuário já existe
@@ -44,11 +45,18 @@ router.post('/registro', async (req: Request, res: Response) => {
       ) // Login_Usuario
       
     } else if(nivelUsuario == 2) {
+      const empresaQuery = await dbConnection.query(
+        `INSERT INTO Empresa_Info (nome, endereco, cidade, enderecoMaps, precoMedio, totalSemanal, imagemBanner, imagemAvatar, horarioFuncionamento, abertoFechado, nivelEmpresa, CNPJ) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+        [nome, endereco, cidade, enderecoMaps, precoMedio, totalSemanal, imagemBanner, imagemAvatar, horarioFuncionamento, abertoFechado, nivelEmpresa, CNPJ]
+      ) // Empresa_Info
+      empresaQuery
+
       await dbConnection.query(
         `INSERT INTO Login_Usuario (email, password, codigoVerificacao, nivelUsuario, idEmpresa) 
        VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [email, hashedPassword, codigoVerificacao, nivelUsuario, idEmpresa] // Registro empresa
-      )
+      [email, hashedPassword, codigoVerificacao, nivelUsuario, empresaQuery.rows[0].id]
+      ) // Login_Usuario
     }
 
     // Obter o ID de login
