@@ -11,6 +11,8 @@ router.post('/agendar', authMiddleware, async (req: Request, res: Response) => {
     return res.status(401).json({ message: 'Usuário não autenticado' });
   }
   const userId = (req.userAuthenticated as JwtPayload).id; // Adiciona a asserção de tipo
+
+  // FAZER O CODIGO
 })
 
 export default router

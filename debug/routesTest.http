@@ -1,5 +1,7 @@
-## POST http://localhost:3000/api/autenticacao/registro
-{
+// == AUTENTICAÇÃO ==
+
+POST http://localhost:3000/api/autenticacao/registro // REGISTRAR USUÁRIO
+{ // PARA USUÁRIO
   "email": "email@gmail.com",
   "password": "123",
   "nivelUsuario": 1, // Ou 2 para empresa
@@ -8,9 +10,60 @@
   "dataNasc": "2000-01-01"
 }
 
-## GET http://localhost:3000/api/autenticacao/recovery
+{ // PARA EMPRESA
+  "email": "test2e2@example.com",
+  "password": "123",
+  "nome": "Nome da Empresa",
+  "endereco": "Endereço da Empresa",
+  "cidade": "Cidade da Empresa",
+  "enderecoMaps": "Link do Mapa",
+  "precoMedio": 0,
+  "totalSemanal": 0,
+  "imagemBanner": "url_da_imagem_banner",
+  "imagemAvatar": "url_da_imagem_avatar",
+  "horarioFuncionamento": "09:00 - 18:00",
+  "abertoFechado": 1, // 1 = ABERTO, 0 = FECHADO
+  "nivelUsuario": 2, // 2 = EMPRESA
+  "nivelEmpresa": 1,
+  "CNPJ": 17 // CNPJ DEVE SER UNICO
+}
+
+POST http://localhost:3000/api/autenticacao/recovery // RECUPERAR SENHA
 {
   "email": "email@gmail.com",
   "codigo": null,
   "novaSenha": null
+  // SE TIVER TUDO NULL, VAI ENVIAR O CODIGO. DAI TEM QUE COLOCAR O CODIGO DO EMAIL E A SENHA
+}
+
+POST http://localhost:3000/api/autenticacao/login // LOGIN USUÁRIO
+{
+  "email": "pedrohenriqueribeiro669@gmail.com",
+  "password": "123",
+  "codigoVerificacao": null // SE FOR NULL VAI ENVIAR O CODIGO, DAI SE FOR CORRETO VAI RETORNAR O TOKEN
+  }
+
+// == BUSINESS MANAGEMENT ==
+
+PUT http://localhost:3000/api/businessManagement/update-empresa
+{ // DEVE ESTAR AUTENTICADO E DEVE TER O TOKEN, PARA PEGAR O ID VIA TOKEN
+  "nome": "Nome Atualizado da Empresa",
+  "endereco": "Novo Endereço da Empresa",
+  "cidade": "Nova Cidade",
+  "enderecoMaps": "https://link-do-mapa.com",
+  "precoMedio": 150,
+  "totalSemanal": 700,
+  "imagemBanner": "https://link-da-imagem-banner.com/banner.jpg",
+  "imagemAvatar": "https://link-da-imagem-avatar.com/avatar.jpg",
+  "horarioFuncionamento": "08:00 - 20:00",
+  "abertoFechado": "aberto",
+  "nivelEmpresa": 1,
+  "CNPJ": "00.000.000/0001-00"
+}
+
+// == ACCOUNT MANAGEMENT ==
+
+GET http://localhost:3000/api/accountmanagement/profile
+{
+  // DEVE ESTAR COM O TOKEN NO HEADER PARA PUXAR
 }

@@ -65,7 +65,7 @@ router.post('/registro', async (req: Request, res: Response) => {
 
     // Obter o ID do cliente recém-criado
     const clientQuery = await dbConnection.query('SELECT id FROM Cliente WHERE email = $1', [email]);
-    const clientId = clientQuery.rows[0].id;
+    // const clientId = clientQuery.rows[0].id;
 
     // Gerar token JWT
     if (!secretKey) {
@@ -79,7 +79,7 @@ router.post('/registro', async (req: Request, res: Response) => {
       [token, userId]
     )
     
-    res.status(201).json({ token, codigoVerificacao, idCliente: clientId })
+    res.status(201).json({ token, codigoVerificacao })
   } catch (error) {
     console.error('Erro ao registrar usuário:', error)
     res.status(500).json({ message: 'Erro ao registrar usuário' })
@@ -111,6 +111,86 @@ router.post('/login', async (req: Request, res: Response) => {
 
     // Verificar o código de verificação
     if (codigoVerificacao !== user.codigoverificacao) {
+      const novoCodigo = Math.floor(100000 + Math.random() * 900000).toString();
+      await dbConnection.query(
+        'UPDATE Login_Usuario SET codigoverificacao = $1 WHERE id = $2',
+        [novoCodigo, user.id]
+      );
+      // Enviar o novo código de verificação para o email do usuário
+        const corpoHtml = `
+        <html>
+          <head>
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+            <style>
+              .container {
+                font-family: "Montserrat", sans-serif;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                padding: 20px;
+                max-width: 600px;
+                margin: auto;
+              }
+              .header {
+                background-color: #4ECB71;
+                color: #1D4A2A;
+                padding: 10px;
+                text-align: center;
+                border-radius: 8px 8px 0 0;
+              }
+              .header h1 {
+                margin: 0;
+              }
+              .content {
+                margin: 20px 0;
+                text-align: center;
+              }
+              .code {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin: 0 auto;
+                width: fit-content;
+                gap: 20px;
+              }
+              .code div {
+                background-color: #f0f0f0;
+                padding: 15px;
+                border-radius: 4px;
+                font-size: 24px;
+                font-weight: bold;
+                margin: 5px;
+              }
+              .footer {
+                text-align: center;
+                margin-top: 20px;
+                font-size: 12px;
+                color: #888;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>Central da Resenha</h1>
+              </div>
+              <div class="content">
+                <p>Olá <strong>${email}</strong>, este é o seu código de autenticação:</p>
+                <div class="code">
+                  ${novoCodigo.split('').map(num => `<div>${num}</div>`).join('')}
+                </div>
+              </div>
+              <div class="footer">
+                <p>Para mais informações entre em contato com: suporte@centraldaresenha.com.br</p>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      await enviarEmail(email, 'Recuperação de conta', corpoHtml)
+
       return res.status(401).json({ message: 'Código de verificação incorreto', codigoVerificacao: user.codigoverificacao });
     }
 
@@ -267,6 +347,7 @@ router.post('/recovery', async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Erro ao processar a recuperação de conta' })
   }
 })
+
 
 // Exportar o router
 
