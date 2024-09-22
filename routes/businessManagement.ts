@@ -96,14 +96,17 @@ router.post('/campo', authMiddleware, async (req, res) => {
       horarios
     } = req.body;
 
+    // Convertendo horarios para o formato JSONB
+    const horariosJSONB = JSON.stringify(horarios);
+
     const insertQuery = `
       INSERT INTO Campos_da_Empresa (idEmpresa, nomeCampo, bannerCampo, preco, disponibilidade, horarios)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      VALUES ($1, $2, $3, $4, $5, $6::JSONB)
       RETURNING *
     `;
 
     const insertedCampo = await dbConnection.query(insertQuery, [
-      idEmpresa, nomeCampo, bannerCampo, preco, disponibilidade, horarios
+      idEmpresa, nomeCampo, bannerCampo, preco, disponibilidade, horariosJSONB
     ]);
 
     if (insertedCampo.rows.length === 0) {
@@ -116,7 +119,5 @@ router.post('/campo', authMiddleware, async (req, res) => {
     res.status(500).json({ message: 'Erro ao adicionar campo' });
   }
 });
-
-
 
 export default router

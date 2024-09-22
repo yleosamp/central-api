@@ -1,6 +1,6 @@
 // == AUTENTICAÇÃO ==
 
-POST http://localhost:3000/api/autenticacao/registro // REGISTRAR USUÁRIO
+POST http://localhost:3000/api/authentication/registro // REGISTRAR USUÁRIO
 { // PARA USUÁRIO
   "email": "email@gmail.com",
   "password": "123",
@@ -41,7 +41,7 @@ POST http://localhost:3000/api/autenticacao/login // LOGIN USUÁRIO
   "email": "pedrohenriqueribeiro669@gmail.com",
   "password": "123",
   "codigoVerificacao": null // SE FOR NULL VAI ENVIAR O CODIGO, DAI SE FOR CORRETO VAI RETORNAR O TOKEN
-  }
+}
 
 // == BUSINESS MANAGEMENT == - AUTENTICADO
 
@@ -62,8 +62,30 @@ PUT http://localhost:3000/api/businessManagement/update-empresa
 }
 
 POST http://localhost:3000/api/businessManagement/campo
-{
-  
+{ // DEVE ESTAR AUTENTICADO E DEVE TER O TOKEN, PARA PEGAR O ID VIA TOKEN
+  "nomeCampo": "Campo de Futebol",
+  "bannerCampo": "https://example.com/banner.jpg",
+  "preco": 100,
+  "disponibilidade": 1,
+  "horarios": {
+    "segunda": ["15:00", "16:00", "17:00"],
+    "terca": ["15:00", "16:00", "17:00"],
+    "quarta": ["15:00", "16:00", "17:00"],
+    "quinta": ["15:00", "16:00", "17:00"],
+    "sexta": ["15:00", "16:00", "17:00"]
+  }
+}
+
+// == FIELD SCHEDULE == - AUTENTICADO
+
+POST http://localhost:3000/api/schedule/agendar
+{ // DEVE ESTAR AUTENTICADO E DEVE TER O TOKEN, PARA PEGAR O ID VIA TOKEN
+    "idCampo": 1,
+    "horario": {
+        "segunda": ["15:00"]
+    },
+    "quantidadePessoas": 5,
+    "semana": "2023-10-30"
 }
 
 // == ACCOUNT MANAGEMENT == - AUTENTICADO

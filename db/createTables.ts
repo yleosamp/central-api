@@ -61,7 +61,7 @@ const createTables = async () => {
         id SERIAL PRIMARY KEY,
         idCliente INTEGER REFERENCES Cliente(id),
         idCampo INTEGER REFERENCES Campos_da_Empresa(id),
-        horario TEXT[],
+        horario JSONB,
         quantidadePessoas INTEGER,
         semana TEXT
     );
