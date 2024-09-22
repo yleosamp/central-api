@@ -73,5 +73,50 @@ router.put('/update-empresa', authMiddleware, async (req: Request, res: Response
   }
 });
 
+router.post('/campo', authMiddleware, async (req, res) => {
+  try {
+    if (!req.userAuthenticated) {
+      return res.status(401).json({ message: 'Usuário não autenticado' });
+    }
+
+    const userId = (req.userAuthenticated as JwtPayload).id;
+    const userQuery = await dbConnection.query('SELECT * FROM Login_Usuario WHERE id = $1', [userId]);
+
+    if (userQuery.rows.length === 0 || !userQuery.rows[0].idempresa) {
+      return res.status(404).json({ message: 'Empresa não encontrada para este usuário' });
+    }
+
+    const idEmpresa = userQuery.rows[0].idempresa;
+
+    const {
+      nomeCampo,
+      bannerCampo,
+      preco,
+      disponibilidade,
+      horarios
+    } = req.body;
+
+    const insertQuery = `
+      INSERT INTO Campos_da_Empresa (idEmpresa, nomeCampo, bannerCampo, preco, disponibilidade, horarios)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `;
+
+    const insertedCampo = await dbConnection.query(insertQuery, [
+      idEmpresa, nomeCampo, bannerCampo, preco, disponibilidade, horarios
+    ]);
+
+    if (insertedCampo.rows.length === 0) {
+      return res.status(404).json({ message: 'Falha ao adicionar campo' });
+    }
+
+    res.status(200).json({ message: 'Campo adicionado com sucesso', campo: insertedCampo.rows[0] });
+  } catch (error) {
+    console.error('Erro ao adicionar campo:', error);
+    res.status(500).json({ message: 'Erro ao adicionar campo' });
+  }
+});
+
+
 
 export default router
