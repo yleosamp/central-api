@@ -94,3 +94,15 @@ GET http://localhost:3000/api/accountmanagement/profile
 {
   // DEVE ESTAR COM O TOKEN NO HEADER PARA PUXAR
 }
+
+// == PAGINA HOME == - AUTENTICADO
+
+GET http://localhost:3000/api/home/empresas
+{
+
+}
+
+GET http://localhost:3000/api/home/campos/1
+{ // O NÚMERO 1 É O ID DA EMPRESA
+
+}

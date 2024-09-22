@@ -348,7 +348,6 @@ router.post('/recovery', async (req: Request, res: Response) => {
   }
 })
 
-
 // Exportar o router
 
 export default router
