@@ -43,7 +43,7 @@ POST http://localhost:3000/api/autenticacao/login // LOGIN USUÁRIO
   "codigoVerificacao": null // SE FOR NULL VAI ENVIAR O CODIGO, DAI SE FOR CORRETO VAI RETORNAR O TOKEN
   }
 
-// == BUSINESS MANAGEMENT ==
+// == BUSINESS MANAGEMENT == - AUTENTICADO
 
 PUT http://localhost:3000/api/businessManagement/update-empresa
 { // DEVE ESTAR AUTENTICADO E DEVE TER O TOKEN, PARA PEGAR O ID VIA TOKEN
@@ -52,16 +52,21 @@ PUT http://localhost:3000/api/businessManagement/update-empresa
   "cidade": "Nova Cidade",
   "enderecoMaps": "https://link-do-mapa.com",
   "precoMedio": 150,
-  "totalSemanal": 700,
+  "totalSemanal": 0, // PADRÃO É 0
   "imagemBanner": "https://link-da-imagem-banner.com/banner.jpg",
   "imagemAvatar": "https://link-da-imagem-avatar.com/avatar.jpg",
   "horarioFuncionamento": "08:00 - 20:00",
-  "abertoFechado": "aberto",
+  "abertoFechado": 1, // BOOLEANO, 1 = ABERTO
   "nivelEmpresa": 1,
   "CNPJ": "00.000.000/0001-00"
 }
 
-// == ACCOUNT MANAGEMENT ==
+POST http://localhost:3000/api/businessManagement/campo
+{
+  
+}
+
+// == ACCOUNT MANAGEMENT == - AUTENTICADO
 
 GET http://localhost:3000/api/accountmanagement/profile
 {
