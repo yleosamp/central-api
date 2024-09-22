@@ -6,6 +6,7 @@ import { JwtPayload } from 'jsonwebtoken';
 const router = Router()
 
 // Rota para agendar um campo
+
 router.post('/agendar', authMiddleware, async (req: Request, res: Response) => {
   if (!req.userAuthenticated) {
     return res.status(401).json({ message: 'Usuário não autenticado' });
