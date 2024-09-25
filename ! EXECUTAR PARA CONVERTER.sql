@@ -9,3 +9,7 @@ ALTER TABLE Agendamento DROP COLUMN horario;
 
 -- 4. Renomeia a nova coluna para o nome original
 ALTER TABLE Agendamento RENAME COLUMN horario_temp TO horario;
+
+-- ADICIONAR COLUNA DE idEmpresa NO AGENDAMENTO
+ALTER TABLE Agendamento
+ADD COLUMN idEmpresa INTEGER REFERENCES Empresa_Info(id);

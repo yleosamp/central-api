@@ -130,4 +130,27 @@ router.delete('/delete', authMiddleware, async (req: Request, res: Response) => 
   }
 });
 
+router.get('/profile/:id', async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.id;
+
+    const profileQuery = await dbConnection.query(
+      'SELECT id, email, nickname, nomeReal, dataNasc, amigos, fotoAvatar FROM Cliente WHERE id = $1',
+      [userId]
+    );
+
+    if (profileQuery.rows.length === 0) {
+      return res.status(404).json({ message: 'Perfil não encontrado' });
+    }
+
+    const userProfile = profileQuery.rows[0];
+
+    return res.status(200).json({ profile: userProfile });
+  } catch (error) {
+    console.error('Erro ao buscar o perfil:', error);
+    res.status(500).json({ message: 'Erro ao buscar o perfil' });
+  }
+});
+
+
 export default router

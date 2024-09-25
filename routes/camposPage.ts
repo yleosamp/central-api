@@ -20,7 +20,7 @@ router.get('/empresas', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-router.get('/campos/:idEmpresa', authMiddleware, async (req: Request, res: Response) => {
+router.get('/campos/:idEmpresa', async (req: Request, res: Response) => {
   try {
     const idEmpresa = req.params.idEmpresa;
     const query = `
@@ -35,7 +35,5 @@ router.get('/campos/:idEmpresa', authMiddleware, async (req: Request, res: Respo
     res.status(500).json({ message: 'Erro ao listar campos da empresa' });
   }
 });
-
-
 
 export default router

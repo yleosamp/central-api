@@ -2,6 +2,7 @@
 import express, { Request, Response } from 'express'
 import dotenv from 'dotenv'
 import createTables from './db/createTables'
+import cors from 'cors'
 const app = express()
 
 dotenv.config() // Utilizando o dotenv para carregar as variáveis de ambiente
@@ -9,6 +10,7 @@ dotenv.config() // Utilizando o dotenv para carregar as variáveis de ambiente
 const port = process.env.PORT || 3000 // Definindo a porta do servidor
 
 app.use(express.json())
+app.use(cors()) // Configurando o CORS
 
 // Usar os roteadores
 import startedRouter from './routes/started'

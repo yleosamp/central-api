@@ -63,6 +63,7 @@ const createTables = async () => {
         idCampo INTEGER REFERENCES Campos_da_Empresa(id),
         horario JSONB,
         quantidadePessoas INTEGER,
+        idEmpresa INTEGER REFERENCES Empresa_Info(id),
         semana TEXT
     );
 

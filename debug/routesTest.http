@@ -80,12 +80,13 @@ POST http://localhost:3000/api/businessManagement/campo
 
 POST http://localhost:3000/api/schedule/agendar
 { // DEVE ESTAR AUTENTICADO E DEVE TER O TOKEN, PARA PEGAR O ID VIA TOKEN
-    "idCampo": 1,
-    "horario": {
-        "segunda": ["15:00"]
-    },
-    "quantidadePessoas": 5,
-    "semana": "2023-10-30"
+  "idCampo": 1,
+  "idEmpresa": 1,
+  "horario": {
+    "segunda": ["15:00"]
+  },
+  "quantidadePessoas": 5,
+  "semana": "2023-10-30"
 }
 
 // == ACCOUNT MANAGEMENT == - AUTENTICADO
