@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import dbConnection from '../db/connection';
 import { authMiddleware } from '../middlewares/verifyTokenInHeader';
 import { JwtPayload } from 'jsonwebtoken';
+import multer from 'multer';
 
 const router = Router()
 
@@ -73,8 +74,20 @@ router.put('/update-empresa', authMiddleware, async (req: Request, res: Response
   }
 });
 
+// Configuração do multer
+const storage = multer.diskStorage({
+  destination: (req: Request, file: any, cb: any) => {
+    cb(null, 'uploads/'); // Pasta onde os arquivos serão salvos
+  },
+  filename: (req: Request, file: any, cb: any) => {
+    cb(null, file.originalname); // Nome do arquivo
+  }
+});
+
+const upload = multer({ storage });
+
 // Rota para adicionar um campo
-router.post('/campo', authMiddleware, async (req, res) => {
+router.post('/campo', authMiddleware, upload.single('bannerCampo'), async (req, res) => {
   try {
     if (!req.userAuthenticated) {
       return res.status(401).json({ message: 'Usuário não autenticado' });
@@ -91,7 +104,6 @@ router.post('/campo', authMiddleware, async (req, res) => {
 
     const {
       nomeCampo,
-      bannerCampo,
       preco,
       disponibilidade,
       horarios
@@ -99,6 +111,13 @@ router.post('/campo', authMiddleware, async (req, res) => {
 
     // Convertendo horarios para o formato JSONB
     const horariosJSONB = JSON.stringify(horarios);
+
+    // Verificar se o arquivo foi enviado
+    if (!req.file) {
+      return res.status(400).json({ message: 'Arquivo não enviado' });
+    }
+
+    const bannerCampo = req.file.path; // Caminho do arquivo salvo
 
     const insertQuery = `
       INSERT INTO Campos_da_Empresa (idEmpresa, nomeCampo, bannerCampo, preco, disponibilidade, horarios)
@@ -233,7 +252,5 @@ router.delete('/delete-agendamento/:id', authMiddleware, async (req, res) => {
     res.status(500).json({ message: 'Erro ao deletar agendamento' });
   }
 });
-
-
 
 export default router
