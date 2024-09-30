@@ -253,4 +253,33 @@ router.delete('/delete-agendamento/:id', authMiddleware, async (req, res) => {
   }
 });
 
+router.get('/campos', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    if (!req.userAuthenticated) {
+      return res.status(401).json({ message: 'Usuário não autenticado' });
+    }
+
+    const userId = (req.userAuthenticated as JwtPayload).id;
+
+    // Puxar o id da empresa por meio do id de login
+    const empresaQuery = await dbConnection.query('SELECT idEmpresa FROM Login_Usuario WHERE id = $1', [userId]);
+    if (empresaQuery.rows.length === 0) {
+      return res.status(403).json({ message: 'Usuário não tem permissão para acessar os campos' });
+    }
+    const idEmpresa = empresaQuery.rows[0].idempresa;
+
+    // console.log(`userId: ${userId}, idEmpresa: ${idEmpresa}`);
+
+    // Puxar os campos da empresa por meio do id da empresa
+    const camposQuery = await dbConnection.query('SELECT * FROM Campos_da_Empresa WHERE idEmpresa = $1', [idEmpresa]);
+    res.json(camposQuery.rows);
+  } catch (error) {
+    console.error('Erro ao listar campos da empresa:', error);
+    res.status(500).json({ message: 'Erro ao listar campos da empresa' });
+  }
+});
+
+
+
+
 export default router

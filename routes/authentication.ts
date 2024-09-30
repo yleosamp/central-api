@@ -4,16 +4,44 @@ import jwt from 'jsonwebtoken'
 import bcrypt from 'bcrypt'
 import dotenv from 'dotenv'
 import { enviarEmail } from '../mail/emailConfig'
+import multer, { diskStorage, FileFilterCallback } from 'multer'
+import path from 'path'
 
 dotenv.config()
 
 const router = Router()
 const secretKey = process.env.JWT_SECRET // Certifique-se de definir JWT_SECRET no seu arquivo .env
 
+// Configuração do multer
+const storage = diskStorage({
+  destination: (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
+    cb(null, 'uploads/'); // Pasta onde os arquivos serão salvos
+  },
+  filename: (req: Request, file: Express.Multer.File, cb: (error: any, filename: string) => void) => {
+    cb(null, `${Date.now()}-${file.originalname}`); // Nome do arquivo com timestamp
+  }
+});
+
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    if (ext !== '.jpg' && ext !== '.png') {
+      return cb(new Error('Apenas arquivos JPG e PNG são permitidos.'));
+    }
+    cb(null, true);
+  }
+});
+
 // Rotas de autenticação - Registro
-router.post('/registro', async (req: Request, res: Response) => {
+router.post('/registro', upload.fields([{ name: 'imagemBanner' }, { name: 'imagemAvatar' }]), async (req: Request, res: Response) => {
   const { email, password, nivelUsuario, idCliente, idEmpresa, nickname, nomeReal, dataNasc } = req.body
-  const { nome, endereco, cidade, enderecoMaps, precoMedio, totalSemanal, imagemBanner, imagemAvatar, horarioFuncionamento, abertoFechado, nivelEmpresa, CNPJ } = req.body
+  const { nome, endereco, cidade, enderecoMaps, precoMedio, totalSemanal, horarioFuncionamento, abertoFechado, nivelEmpresa, CNPJ } = req.body
+
+
+  // Verificar se req.files está definido
+  const imagemBanner = req.files && req.files['imagemBanner'] ? (req.files['imagemBanner'] as Express.Multer.File[])[0].path : null;
+  const imagemAvatar = req.files && req.files['imagemAvatar'] ? (req.files['imagemAvatar'] as Express.Multer.File[])[0].path : null;
 
   try {
     // Verificar se o usuário já existe
@@ -40,22 +68,22 @@ router.post('/registro', async (req: Request, res: Response) => {
 
       await dbConnection.query(
         `INSERT INTO Login_Usuario (email, password, codigoVerificacao, nivelUsuario, idCliente) 
-       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [email, hashedPassword, codigoVerificacao, nivelUsuario, clienteQuery.rows[0].id]
+         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [email, hashedPassword, codigoVerificacao, nivelUsuario, clienteQuery.rows[0].id]
       ) // Login_Usuario
       
     } else if(nivelUsuario == 2) {
       const empresaQuery = await dbConnection.query(
-        `INSERT INTO Empresa_Info (nome, endereco, cidade, enderecoMaps, precoMedio, totalSemanal, imagemBanner, imagemAvatar, horarioFuncionamento, abertoFechado, nivelEmpresa, CNPJ) 
+        `INSERT INTO Empresa_Info (nome, endereco, cidade, enderecoMaps, precoMedio, totalSemanal, horarioFuncionamento, abertoFechado, nivelEmpresa, CNPJ, imagembanner, imagemavatar) 
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
-        [nome, endereco, cidade, enderecoMaps, precoMedio, totalSemanal, imagemBanner, imagemAvatar, horarioFuncionamento, abertoFechado, nivelEmpresa, CNPJ]
+        [nome, endereco, cidade, enderecoMaps, precoMedio, totalSemanal, horarioFuncionamento, abertoFechado, nivelEmpresa, CNPJ, imagemBanner, imagemAvatar]
       ) // Empresa_Info
       empresaQuery
 
       await dbConnection.query(
         `INSERT INTO Login_Usuario (email, password, codigoVerificacao, nivelUsuario, idEmpresa) 
-       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [email, hashedPassword, codigoVerificacao, nivelUsuario, empresaQuery.rows[0].id]
+         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [email, hashedPassword, codigoVerificacao, nivelUsuario, empresaQuery.rows[0].id]
       ) // Login_Usuario
     }
 
