@@ -10,7 +10,7 @@ dotenv.config() // Utilizando o dotenv para carregar as variáveis de ambiente
 const port = process.env.PORT || 3000 // Definindo a porta do servidor
 
 app.use(express.json())
-app.use(cors()) // Configurando o CORS
+app.use(cors({ origin: '*' })) // Configurando o CORS para permitir qualquer origem
 
 // Usar os roteadores
 import startedRouter from './routes/started'
