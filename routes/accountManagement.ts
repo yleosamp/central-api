@@ -23,8 +23,9 @@ router.put('/update', authMiddleware, async (req, res) => {
     if (!req.userAuthenticated) {
       return res.status(401).json({ message: 'Usuário não autenticado' });
     }
-    const userId = (req.userAuthenticated as JwtPayload).id;
+    const loginUserId = (req.userAuthenticated as JwtPayload).id;
 
+    // Desestruturação das variáveis do req.body
     const {
       pontos,
       vitorias,
@@ -42,19 +43,32 @@ router.put('/update', authMiddleware, async (req, res) => {
       geral
     } = req.body;
 
-    // Verifica se o perfil já existe
+    // Primeiro, buscar o idCliente da tabela login_usuario
+    const userQuery = await dbConnection.query(
+      'SELECT idCliente FROM login_usuario WHERE id = $1',
+      [loginUserId]
+    );
+
+    if (userQuery.rows.length === 0) {
+      return res.status(404).json({ message: 'Cliente não encontrado' });
+    }
+
+    // Este é o id da tabela Cliente que será usado como foreign key
+    const clienteId = userQuery.rows[0].idcliente;
+
+    // Verifica se o perfil já existe usando o id do Cliente
     const existingProfile = await dbConnection.query(
       'SELECT * FROM Estatisticas_do_Cliente WHERE idUsuario = $1',
-      [userId]
+      [clienteId]
     );
 
     if (existingProfile.rows.length === 0) {
-      // Se não existir, insere um novo perfil
+      // Se não existir, insere um novo perfil usando o id do Cliente
       await dbConnection.query(
         `INSERT INTO Estatisticas_do_Cliente 
         (idUsuario, pontos, vitorias, jogos, reflexos, defesa, forca, fisico, estrelas, estilo, posicao, cidadeEstado, numeroPreferido, bairro, geral) 
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-        [userId, pontos, vitorias, jogos, reflexos, defesa, forca, fisico, estrelas, estilo, posicao, cidadeEstado, numeroPreferido, bairro, geral]
+        [clienteId, pontos, vitorias, jogos, reflexos, defesa, forca, fisico, estrelas, estilo, posicao, cidadeEstado, numeroPreferido, bairro, geral]
       );
     } else {
       // Se existir, atualiza o perfil
@@ -62,7 +76,7 @@ router.put('/update', authMiddleware, async (req, res) => {
         `UPDATE Estatisticas_do_Cliente 
         SET pontos = $2, vitorias = $3, jogos = $4, reflexos = $5, defesa = $6, forca = $7, fisico = $8, estrelas = $9, estilo = $10, posicao = $11, cidadeEstado = $12, numeroPreferido = $13, bairro = $14, geral = $15
         WHERE idUsuario = $1`,
-        [userId, pontos, vitorias, jogos, reflexos, defesa, forca, fisico, estrelas, estilo, posicao, cidadeEstado, numeroPreferido, bairro, geral]
+        [clienteId, pontos, vitorias, jogos, reflexos, defesa, forca, fisico, estrelas, estilo, posicao, cidadeEstado, numeroPreferido, bairro, geral]
       );
     }
 
@@ -134,8 +148,33 @@ router.get('/profile/:id', async (req: Request, res: Response) => {
   try {
     const userId = req.params.id;
 
+    // Buscar dados do perfil básico e estatísticas usando JOIN
     const profileQuery = await dbConnection.query(
-      'SELECT id, email, nickname, nomeReal, dataNasc, amigos, fotoAvatar FROM Cliente WHERE id = $1',
+      `SELECT 
+        c.id, 
+        c.email, 
+        c.nickname, 
+        c.nomeReal, 
+        c.dataNasc, 
+        c.amigos, 
+        c.fotoAvatar,
+        e.pontos,
+        e.vitorias,
+        e.jogos,
+        e.reflexos,
+        e.defesa,
+        e.forca,
+        e.fisico,
+        e.estrelas,
+        e.estilo,
+        e.posicao,
+        e.cidadeEstado,
+        e.numeroPreferido,
+        e.bairro,
+        e.geral
+      FROM Cliente c
+      LEFT JOIN Estatisticas_do_Cliente e ON c.id = e.idUsuario
+      WHERE c.id = $1`,
       [userId]
     );
 

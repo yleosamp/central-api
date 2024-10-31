@@ -43,8 +43,24 @@ router.post('/agendar', authMiddleware, async (req: Request, res: Response) => {
     await dbConnection.query(updateCampoQuery, [JSON.stringify(campoHorariosJSON), idCampo]);
 
     // Inserir o agendamento
+
+    // Buscar o idCliente da tabela login_usuario
+    const userQuery = await dbConnection.query(
+      'SELECT idCliente FROM login_usuario WHERE id = $1',
+      [userId]
+    );
+
+    if (userQuery.rows.length === 0) {
+      return res.status(404).json({ message: 'Cliente não encontrado' });
+    }
+
+    const idCliente = userQuery.rows[0].idCliente;
+
+    // Atualizar o insert usando o idCliente ao invés do userId
     const insertAgendamentoQuery = `INSERT INTO Agendamento (idCliente, idCampo, idEmpresa, horario, quantidadePessoas, semana) VALUES ($1, $2, $3, $4::JSONB, $5, $6) RETURNING *`;
-    const insertedAgendamento = await dbConnection.query(insertAgendamentoQuery, [userId, idCampo, idEmpresa, horarioJSONB, quantidadePessoas, semana]);
+    const insertedAgendamento = await dbConnection.query(insertAgendamentoQuery, 
+      [idCliente, idCampo, idEmpresa, horarioJSONB, quantidadePessoas, semana]
+    );
 
     if (insertedAgendamento.rows.length === 0) {
       return res.status(404).json({ message: 'Falha ao agendar campo' });
