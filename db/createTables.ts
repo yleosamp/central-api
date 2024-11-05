@@ -10,7 +10,7 @@ const createTables = async () => {
         enderecoMaps TEXT,
         precoMedio FLOAT,
         totalSemanal FLOAT,
-        imagemBanner TEXT,
+        imagemBanner TEXT, 
         imagemAvatar TEXT,
         horarioFuncionamento TEXT,
         abertoFechado BOOLEAN,
