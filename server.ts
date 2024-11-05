@@ -3,6 +3,8 @@ import express, { Request, Response } from 'express'
 import dotenv from 'dotenv'
 import createTables from './db/createTables'
 import cors from 'cors'
+import './routes/resetAgendamento' // Importar o arquivo do cron
+
 const app = express()
 
 dotenv.config() // Utilizando o dotenv para carregar as variáveis de ambiente

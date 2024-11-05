@@ -14,9 +14,10 @@ router.post('/agendar', authMiddleware, async (req: Request, res: Response) => {
     }
     const userId = (req.userAuthenticated as JwtPayload).id;
 
-    // Continuar com a lógica de agendamento do campo
+    const { idCampo, horario, quantidadePessoas } = req.body;
 
-    const { idCampo, horario, quantidadePessoas, semana, idEmpresa } = req.body;
+    // Obter a data atual
+    const dataAtual = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
 
     // Convertendo horario para o formato JSONB
     const horarioJSONB = JSON.stringify(horario);
@@ -43,8 +44,8 @@ router.post('/agendar', authMiddleware, async (req: Request, res: Response) => {
     await dbConnection.query(updateCampoQuery, [JSON.stringify(campoHorariosJSON), idCampo]);
 
     // Inserir o agendamento
-    const insertAgendamentoQuery = `INSERT INTO Agendamento (idCliente, idCampo, idEmpresa, horario, quantidadePessoas, semana) VALUES ($1, $2, $3, $4::JSONB, $5, $6) RETURNING *`;
-    const insertedAgendamento = await dbConnection.query(insertAgendamentoQuery, [userId, idCampo, idEmpresa, horarioJSONB, quantidadePessoas, semana]);
+    const insertAgendamentoQuery = `INSERT INTO Agendamento (idCliente, idCampo, idEmpresa, horario, quantidadePessoas, semana, data) VALUES ($1, $2, $3, $4::JSONB, $5, $6, $7) RETURNING *`;
+    const insertedAgendamento = await dbConnection.query(insertAgendamentoQuery, [userId, idCampo, req.body.idEmpresa, horarioJSONB, quantidadePessoas, req.body.semana, dataAtual]);
 
     if (insertedAgendamento.rows.length === 0) {
       return res.status(404).json({ message: 'Falha ao agendar campo' });

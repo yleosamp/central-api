@@ -85,8 +85,7 @@ POST http://localhost:3000/api/schedule/agendar
   "horario": {
     "segunda": ["15:00"]
   },
-  "quantidadePessoas": 5,
-  "semana": "2023-10-30"
+  "quantidadePessoas": 5
 }
 
 // == ACCOUNT MANAGEMENT == - AUTENTICADO
