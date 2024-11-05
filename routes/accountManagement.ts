@@ -86,7 +86,7 @@ router.put('/update', authMiddleware, async (req, res) => {
     res.status(500).json({ message: 'Erro ao atualizar o perfil' });
   }
 });
-
+ 
 router.delete('/delete', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = (req.userAuthenticated as JwtPayload).id;
