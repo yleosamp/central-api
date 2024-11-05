@@ -54,6 +54,7 @@ const createTables = async () => {
         bannerCampo TEXT,
         preco FLOAT,
         disponibilidade BOOLEAN,
+        tipoCampo VARCHAR(50),
         horarios JSONB
     );
 

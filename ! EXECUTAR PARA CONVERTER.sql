@@ -13,3 +13,6 @@ ALTER TABLE Agendamento RENAME COLUMN horario_temp TO horario;
 -- ADICIONAR COLUNA DE idEmpresa NO AGENDAMENTO
 ALTER TABLE Agendamento
 ADD COLUMN idEmpresa INTEGER REFERENCES Empresa_Info(id);
+
+
+ALTER TABLE Campos_da_Empresa ADD COLUMN tipoCampo VARCHAR(50);
