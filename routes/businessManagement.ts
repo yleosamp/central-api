@@ -4,6 +4,8 @@ import dbConnection from '../db/connection';
 import { authMiddleware } from '../middlewares/verifyTokenInHeader';
 import { JwtPayload } from 'jsonwebtoken';
 import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
 
 const router = Router()
 
@@ -77,7 +79,7 @@ router.put('/update-empresa', authMiddleware, async (req: Request, res: Response
 // Configuração do multer
 const storage = multer.diskStorage({
   destination: (req: Request, file: any, cb: any) => {
-    cb(null, 'uploads/'); // Pasta onde os arquivos serão salvos
+    cb(null, 'uploads/campos/'); // Pasta onde os arquivos serão salvos
   },
   filename: (req: Request, file: any, cb: any) => {
     cb(null, file.originalname); // Nome do arquivo
@@ -87,56 +89,117 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Rota para adicionar um campo
-router.post('/campo', authMiddleware, upload.single('bannerCampo'), async (req, res) => {
+router.post('/campo', authMiddleware, upload.single('bannerCampo'), async (req: Request, res: Response) => {
   try {
+    console.log('Iniciando a rota /campo');
+
     if (!req.userAuthenticated) {
+      console.error('Usuário não autenticado');
       return res.status(401).json({ message: 'Usuário não autenticado' });
     }
 
     const userId = (req.userAuthenticated as JwtPayload).id;
-    const userQuery = await dbConnection.query('SELECT * FROM Login_Usuario WHERE id = $1', [userId]);
+    console.log(`ID do usuário autenticado: ${userId}`);
 
-    if (userQuery.rows.length === 0 || !userQuery.rows[0].idempresa) {
-      return res.status(404).json({ message: 'Empresa não encontrada para este usuário' });
+    // Buscar o idEmpresa do usuário logado
+    const empresaQuery = await dbConnection.query(
+      'SELECT idEmpresa FROM Login_Usuario WHERE id = $1',
+      [userId]
+    );
+
+    if (!empresaQuery.rows[0]?.idempresa) {
+      console.error('Empresa não encontrada para este usuário');
+      return res.status(404).json({ message: 'Empresa não encontrada' });
     }
 
-    const idEmpresa = userQuery.rows[0].idempresa;
+    const idEmpresa = empresaQuery.rows[0].idempresa;
+    console.log(`ID da empresa: ${idEmpresa}`);
 
+    // Desestruturar o corpo da requisição
     const {
       nomeCampo,
       preco,
       disponibilidade,
-      horarios
+      horarios // Aqui, os horários ainda são uma string
     } = req.body;
 
-    // Convertendo horarios para o formato JSONB
-    const horariosJSONB = JSON.stringify(horarios);
+    console.log('Dados recebidos:', { nomeCampo, preco, disponibilidade, horarios });
 
-    // Verificar se o arquivo foi enviado
-    if (!req.file) {
-      return res.status(400).json({ message: 'Arquivo não enviado' });
+    // Converter a string de horários para um objeto
+    let horariosObj;
+    try {
+      horariosObj = JSON.parse(horarios); // Converte a string para um objeto
+    } catch (error) {
+      console.error('Erro ao converter horários para objeto:', error);
+      return res.status(400).json({ message: 'Formato de horários inválido' });
     }
 
-    const bannerCampo = req.file.path; // Caminho do arquivo salvo
+    // Validar se os horários estão no formato correto
+    const diasSemana = ['segunda', 'terca', 'quarta', 'quinta', 'sexta'];
+    const horarioValido = diasSemana.every(dia => 
+      Array.isArray(horariosObj[dia]) && 
+      horariosObj[dia].every((horario: string) => 
+        /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(horario)
+      )
+    );
 
-    const insertQuery = `
-      INSERT INTO Campos_da_Empresa (idEmpresa, nomeCampo, bannerCampo, preco, disponibilidade, horarios)
-      VALUES ($1, $2, $3, $4, $5, $6::JSONB)
+    if (!horarioValido) {
+      console.error('Formato de horários inválido');
+      return res.status(400).json({ 
+        message: 'Formato de horários inválido' 
+      });
+    }
+
+    // Inserir o campo com os horários como JSONB
+    const query = `
+      INSERT INTO Campos_da_Empresa 
+      (idEmpresa, nomeCampo, bannerCampo, preco, disponibilidade, horarios)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *
     `;
 
-    const insertedCampo = await dbConnection.query(insertQuery, [
-      idEmpresa, nomeCampo, bannerCampo, preco, disponibilidade, horariosJSONB
+    const result = await dbConnection.query(query, [
+      idEmpresa,
+      nomeCampo,
+      '', // Inicialmente vazio, será atualizado depois
+      preco,
+      disponibilidade === 1, // Converte 1 para true
+      horariosObj // Agora, estamos passando o objeto
     ]);
 
-    if (insertedCampo.rows.length === 0) {
-      return res.status(404).json({ message: 'Falha ao adicionar campo' });
+    const campoId = result.rows[0].id;
+    console.log(`Campo inserido com ID: ${campoId}`);
+
+    // Criar pasta para o campo
+    const campoDir = `uploads/campos/${campoId}`;
+    fs.mkdirSync(campoDir, { recursive: true }); // Cria a pasta se não existir
+    console.log(`Pasta criada: ${campoDir}`);
+
+    // Mover a imagem do banner para a nova pasta
+    if (req.file) {
+      console.log('Arquivo recebido:', req.file);
+      const bannerPath = `${campoDir}/${req.file.filename}`;
+      fs.renameSync(req.file.path, bannerPath); // Move o arquivo para a nova pasta
+      console.log(`Arquivo movido para: ${bannerPath}`);
+
+      // Atualizar o caminho da imagem no banco de dados
+      await dbConnection.query(
+        `UPDATE Campos_da_Empresa SET bannerCampo = $1 WHERE id = $2`,
+        [bannerPath, campoId]
+      );
+    } else {
+      console.error('Arquivo não enviado');
+      return res.status(400).json({ message: 'Arquivo não enviado' });
     }
 
-    res.status(200).json({ message: 'Campo adicionado com sucesso', campo: insertedCampo.rows[0] });
+    res.status(201).json({
+      message: 'Campo cadastrado com sucesso',
+      campo: result.rows[0]
+    });
+
   } catch (error) {
-    console.error('Erro ao adicionar campo:', error);
-    res.status(500).json({ message: 'Erro ao adicionar campo' });
+    console.error('Erro ao cadastrar campo:', error);
+    res.status(500).json({ message: 'Erro ao cadastrar campo' });
   }
 });
 

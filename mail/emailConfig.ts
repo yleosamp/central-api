@@ -11,7 +11,18 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD,
   },
+  tls: {
+    rejectUnauthorized: false
+  }
 })
+
+transporter.verify(function(error, success) {
+  if (error) {
+    console.log('Erro na verificação:', error);
+  } else {
+    console.log('Servidor pronto para enviar mensagens');
+  }
+});
 
 export const enviarEmail = async (para: string, assunto: string, corpo: string) => {
   try {

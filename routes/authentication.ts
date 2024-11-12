@@ -6,6 +6,7 @@ import dotenv from 'dotenv'
 import { enviarEmail } from '../mail/emailConfig'
 import multer, { diskStorage, FileFilterCallback } from 'multer'
 import path from 'path'
+import fs from 'fs'
 
 dotenv.config()
 
@@ -15,7 +16,12 @@ const secretKey = process.env.JWT_SECRET // Certifique-se de definir JWT_SECRET 
 // Configuração do multer
 const storage = diskStorage({
   destination: (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
-    cb(null, 'uploads/'); // Pasta onde os arquivos serão salvos
+    // Verifica se o arquivo é o avatar ou banner e define o caminho correspondente
+    if (file.fieldname === 'imagemAvatar') {
+      cb(null, 'uploads/usuario/'); // Pasta para salvar o avatar temporariamente
+    } else {
+      cb(null, 'uploads/'); // Pasta para salvar o banner temporariamente
+    }
   },
   filename: (req: Request, file: Express.Multer.File, cb: (error: any, filename: string) => void) => {
     cb(null, `${Date.now()}-${file.originalname}`); // Nome do arquivo com timestamp
@@ -35,82 +41,105 @@ const upload = multer({
 
 // Rotas de autenticação - Registro
 router.post('/registro', upload.fields([{ name: 'imagemBanner' }, { name: 'imagemAvatar' }]), async (req: Request, res: Response) => {
-  const { email, password, nivelUsuario, idCliente, idEmpresa, nickname, nomeReal, dataNasc } = req.body
-  const { nome, endereco, cidade, enderecoMaps, precoMedio, totalSemanal, horarioFuncionamento, abertoFechado, nivelEmpresa, CNPJ } = req.body
-
+  const { email, password, nivelUsuario, nickname, nomeReal, dataNasc, nome, endereco, cidade, enderecoMaps, precoMedio, totalSemanal, horarioFuncionamento, abertoFechado, nivelEmpresa, CNPJ } = req.body;
 
   // Verificar se req.files está definido
-  const imagemBanner = req.files && req.files['imagemBanner'] ? (req.files['imagemBanner'] as Express.Multer.File[])[0].path : null;
-  const imagemAvatar = req.files && req.files['imagemAvatar'] ? (req.files['imagemAvatar'] as Express.Multer.File[])[0].path : null;
+  const imagemBanner = req.files && req.files['imagemBanner'] ? (req.files['imagemBanner'] as Express.Multer.File[])[0] : null;
+  const imagemAvatar = req.files && req.files['imagemAvatar'] ? (req.files['imagemAvatar'] as Express.Multer.File[])[0] : null;
 
   try {
     // Verificar se o usuário já existe
-    const userCheck = await dbConnection.query('SELECT * FROM Login_Usuario WHERE email = $1', [email])
+    const userCheck = await dbConnection.query('SELECT * FROM Login_Usuario WHERE email = $1', [email]);
     if (userCheck.rows.length > 0) {
-      return res.status(400).json({ message: 'Usuário já existe' })
+      return res.status(400).json({ message: 'Usuário já existe' });
     }
 
     // Criptografar a senha
-    const hashedPassword = await bcrypt.hash(password, 10)
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Gerar código de verificação
-    const codigoVerificacao = Math.floor(100000 + Math.random() * 900000)
+    const codigoVerificacao = Math.floor(100000 + Math.random() * 900000);
 
     // Inserir novo usuário no banco de dados
-
     if (nivelUsuario == 1) {
       const clienteQuery = await dbConnection.query(
         `INSERT INTO Cliente (email, password, nickname, nomeReal, dataNasc) 
          VALUES ($1, $2, $3, $4, $5) RETURNING id`,
         [email, hashedPassword, nickname, nomeReal, dataNasc]
-      ) // Cliente
-      clienteQuery
+      );
+
+      const clienteId = clienteQuery.rows[0].id;
+
+      // Criar pasta para o avatar do cliente
+      const clienteDir = `uploads/usuario/${clienteId}`;
+      fs.mkdirSync(clienteDir, { recursive: true }); // Cria a pasta se não existir
+
+      // Mover a imagem do avatar para a nova pasta
+      if (imagemAvatar) {
+        const avatarPath = `${clienteDir}/${imagemAvatar.filename}`;
+        fs.renameSync(imagemAvatar.path, avatarPath); // Move o arquivo para a nova pasta
+        await dbConnection.query(
+          `UPDATE Cliente SET fotoAvatar = $1 WHERE id = $2`,
+          [avatarPath, clienteId]
+        );
+      }
 
       await dbConnection.query(
         `INSERT INTO Login_Usuario (email, password, codigoVerificacao, nivelUsuario, idCliente) 
          VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-        [email, hashedPassword, codigoVerificacao, nivelUsuario, clienteQuery.rows[0].id]
-      ) // Login_Usuario
-      
-    } else if(nivelUsuario == 2) {
+        [email, hashedPassword, codigoVerificacao, nivelUsuario, clienteId]
+      );
+
+    } else if (nivelUsuario == 2) {
       const empresaQuery = await dbConnection.query(
-        `INSERT INTO Empresa_Info (nome, endereco, cidade, enderecoMaps, precoMedio, totalSemanal, horarioFuncionamento, abertoFechado, nivelEmpresa, CNPJ, imagembanner, imagemavatar) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
-        [nome, endereco, cidade, enderecoMaps, precoMedio, totalSemanal, horarioFuncionamento, abertoFechado, nivelEmpresa, CNPJ, imagemBanner, imagemAvatar]
-      ) // Empresa_Info
-      empresaQuery
+        `INSERT INTO Empresa_Info (nome, endereco, cidade, enderecoMaps, precoMedio, totalSemanal, horarioFuncionamento, abertoFechado, nivelEmpresa, CNPJ) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+        [nome, endereco, cidade, enderecoMaps, precoMedio, totalSemanal, horarioFuncionamento, abertoFechado, nivelEmpresa, CNPJ]
+      );
+
+      const empresaId = empresaQuery.rows[0].id;
+
+      // Criar pasta para o banner da empresa
+      const empresaDir = `uploads/empresas/${empresaId}`;
+      fs.mkdirSync(empresaDir, { recursive: true }); // Cria a pasta se não existir
+
+      // Mover a imagem do banner para a nova pasta
+      if (imagemBanner) {
+        const bannerPath = `${empresaDir}/${imagemBanner.filename}`;
+        fs.renameSync(imagemBanner.path, bannerPath); // Move o arquivo para a nova pasta
+        await dbConnection.query(
+          `UPDATE Empresa_Info SET imagembanner = $1 WHERE id = $2`,
+          [bannerPath, empresaId]
+        );
+      }
 
       await dbConnection.query(
         `INSERT INTO Login_Usuario (email, password, codigoVerificacao, nivelUsuario, idEmpresa) 
          VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-        [email, hashedPassword, codigoVerificacao, nivelUsuario, empresaQuery.rows[0].id]
-      ) // Login_Usuario
+        [email, hashedPassword, codigoVerificacao, nivelUsuario, empresaId]
+      );
     }
 
     // Obter o ID de login
     const loginId = await dbConnection.query('SELECT id FROM Login_Usuario WHERE email = $1', [email]);
-    const userId = loginId.rows[0].id
-
-    // Obter o ID do cliente recém-criado
-    const clientQuery = await dbConnection.query('SELECT id FROM Cliente WHERE email = $1', [email]);
-    // const clientId = clientQuery.rows[0].id;
+    const userId = loginId.rows[0].id;
 
     // Gerar token JWT
     if (!secretKey) {
-      throw new Error('JWT_SECRET não está definido')
+      throw new Error('JWT_SECRET não está definido');
     }
-    const token = jwt.sign({ id: userId }, secretKey) // Removida a opção expiresIn
+    const token = jwt.sign({ id: userId }, secretKey);
 
     // Atualizar o token na tabela Login_Usuario
     await dbConnection.query(
       'UPDATE Login_Usuario SET token = $1 WHERE id = $2',
       [token, userId]
-    )
-    
-    res.status(201).json({ token, codigoVerificacao })
+    );
+
+    res.status(201).json({ token, codigoVerificacao });
   } catch (error) {
-    console.error('Erro ao registrar usuário:', error)
-    res.status(500).json({ message: 'Erro ao registrar usuário' })
+    console.error('Erro ao registrar usuário:', error);
+    res.status(500).json({ message: 'Erro ao registrar usuário' });
   }
 })
 
