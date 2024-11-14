@@ -15,7 +15,7 @@ const createTables = async () => {
         horarioFuncionamento TEXT,
         abertoFechado BOOLEAN,
         nivelEmpresa INTEGER,
-        CNPJ VARCHAR(14) UNIQUE
+        CNPJ VARCHAR(30) UNIQUE
     );
 
     CREATE TABLE IF NOT EXISTS Cliente (

@@ -14,5 +14,7 @@ ALTER TABLE Agendamento RENAME COLUMN horario_temp TO horario;
 ALTER TABLE Agendamento
 ADD COLUMN idEmpresa INTEGER REFERENCES Empresa_Info(id);
 
-
 ALTER TABLE Campos_da_Empresa ADD COLUMN tipoCampo VARCHAR(50);
+
+ALTER TABLE Empresa_Info
+ALTER COLUMN CNPJ TYPE VARCHAR(30);

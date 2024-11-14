@@ -21,6 +21,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// SERVIR IMAGENS
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+
 // Usar os roteadores
 import startedRouter from './routes/started'
 import authenticationRouter from './routes/authentication'
