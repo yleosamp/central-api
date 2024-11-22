@@ -3,7 +3,22 @@ import { authMiddleware } from '../middlewares/verifyTokenInHeader'
 import dbConnection from '../db/connection'
 import { JwtPayload } from 'jsonwebtoken'; // Adicione esta linha
 import { enviarEmail } from '../mail/emailConfig'
+import multer from 'multer';
+
 const router = Router()
+
+// Configuração do multer para upload de imagens
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/avatars/'); // Certifique-se que esta pasta existe
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, `avatar-${uniqueSuffix}${file.originalname}`);
+  }
+});
+
+const upload = multer({ storage: storage });
 
 router.get('/profile', authMiddleware, async (req, res) => {
   try {
@@ -18,15 +33,16 @@ router.get('/profile', authMiddleware, async (req, res) => {
   }
 });
 
-router.put('/update', authMiddleware, async (req, res) => {
+router.put('/update', authMiddleware, upload.single('fotoAvatar'), async (req: Request, res: Response) => {
   try {
     if (!req.userAuthenticated) {
       return res.status(401).json({ message: 'Usuário não autenticado' });
     }
     const loginUserId = (req.userAuthenticated as JwtPayload).id;
 
-    // Desestruturação das variáveis do req.body
+    // Dados do formulário vêm em req.body
     const {
+      nickname,
       pontos,
       vitorias,
       jogos,
@@ -43,6 +59,9 @@ router.put('/update', authMiddleware, async (req, res) => {
       geral
     } = req.body;
 
+    // Caminho da imagem do avatar (se foi enviada)
+    const fotoAvatar = req.file ? req.file.path : null;
+
     // Primeiro, buscar o idCliente da tabela login_usuario
     const userQuery = await dbConnection.query(
       'SELECT idCliente FROM login_usuario WHERE id = $1',
@@ -53,34 +72,49 @@ router.put('/update', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'Cliente não encontrado' });
     }
 
-    // Este é o id da tabela Cliente que será usado como foreign key
     const clienteId = userQuery.rows[0].idcliente;
 
-    // Verifica se o perfil já existe usando o id do Cliente
+    // Atualizar informações do Cliente
+    await dbConnection.query(
+      `UPDATE Cliente 
+       SET nickname = $1, fotoAvatar = $2
+       WHERE id = $3`,
+      [nickname, fotoAvatar, clienteId]
+    );
+
+    // Verifica se o perfil já existe
     const existingProfile = await dbConnection.query(
       'SELECT * FROM Estatisticas_do_Cliente WHERE idUsuario = $1',
       [clienteId]
     );
 
     if (existingProfile.rows.length === 0) {
-      // Se não existir, insere um novo perfil usando o id do Cliente
+      // Se não existir, insere
       await dbConnection.query(
         `INSERT INTO Estatisticas_do_Cliente 
-        (idUsuario, pontos, vitorias, jogos, reflexos, defesa, forca, fisico, estrelas, estilo, posicao, cidadeEstado, numeroPreferido, bairro, geral) 
+        (idUsuario, pontos, vitorias, jogos, reflexos, defesa, forca, fisico, 
+         estrelas, estilo, posicao, cidadeEstado, numeroPreferido, bairro, geral) 
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-        [clienteId, pontos, vitorias, jogos, reflexos, defesa, forca, fisico, estrelas, estilo, posicao, cidadeEstado, numeroPreferido, bairro, geral]
+        [clienteId, pontos, vitorias, jogos, reflexos, defesa, forca, fisico,
+         estrelas, estilo, posicao, cidadeEstado, numeroPreferido, bairro, geral]
       );
     } else {
-      // Se existir, atualiza o perfil
+      // Se existir, atualiza
       await dbConnection.query(
         `UPDATE Estatisticas_do_Cliente 
-        SET pontos = $2, vitorias = $3, jogos = $4, reflexos = $5, defesa = $6, forca = $7, fisico = $8, estrelas = $9, estilo = $10, posicao = $11, cidadeEstado = $12, numeroPreferido = $13, bairro = $14, geral = $15
+        SET pontos = $2, vitorias = $3, jogos = $4, reflexos = $5, defesa = $6,
+            forca = $7, fisico = $8, estrelas = $9, estilo = $10, posicao = $11,
+            cidadeEstado = $12, numeroPreferido = $13, bairro = $14, geral = $15
         WHERE idUsuario = $1`,
-        [clienteId, pontos, vitorias, jogos, reflexos, defesa, forca, fisico, estrelas, estilo, posicao, cidadeEstado, numeroPreferido, bairro, geral]
+        [clienteId, pontos, vitorias, jogos, reflexos, defesa, forca, fisico,
+         estrelas, estilo, posicao, cidadeEstado, numeroPreferido, bairro, geral]
       );
     }
 
-    res.status(200).json({ message: 'Perfil atualizado com sucesso' });
+    res.status(200).json({ 
+      message: 'Perfil atualizado com sucesso',
+      fotoAvatar: fotoAvatar 
+    });
   } catch (error) {
     console.error('Erro ao atualizar o perfil:', error);
     res.status(500).json({ message: 'Erro ao atualizar o perfil' });
@@ -191,6 +225,50 @@ router.get('/profile/:id', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/agendamentos', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    if (!req.userAuthenticated) {
+      return res.status(401).json({ message: 'Usuário não autenticado' });
+    }
 
+    const userId = (req.userAuthenticated as JwtPayload).id;
+
+    // Buscar o idCliente da tabela Login_Usuario
+    const userQuery = await dbConnection.query(
+      'SELECT idCliente FROM Login_Usuario WHERE id = $1',
+      [userId]
+    );
+
+    if (userQuery.rows.length === 0) {
+      return res.status(404).json({ message: 'Cliente não encontrado' });
+    }
+
+    const clienteId = userQuery.rows[0].idcliente;
+
+    // Buscar os agendamentos do cliente
+    const agendamentosQuery = await dbConnection.query(
+      `SELECT a.id, a.idCampo, a.quantidadePessoas, a.idEmpresa, a.semana, a.horario, 
+              c.nomeReal AS nomeUsuario, 
+              ce.nomeCampo, ce.preco, 
+              e.nome AS nomeEmpresa
+       FROM Agendamento a
+       JOIN Cliente c ON c.id = $1
+       JOIN Campos_da_Empresa ce ON a.idCampo = ce.id
+       JOIN Empresa_Info e ON ce.idEmpresa = e.id
+       WHERE a.idCliente = $1`,
+      [clienteId]
+    );
+
+    if (agendamentosQuery.rows.length === 0) {
+      return res.status(404).json({ message: 'Nenhum agendamento encontrado' });
+    }
+
+    // Retornar os agendamentos com as informações necessárias
+    res.status(200).json({ agendamentos: agendamentosQuery.rows });
+  } catch (error) {
+    console.error('Erro ao listar agendamentos:', error);
+    res.status(500).json({ message: 'Erro ao listar agendamentos' });
+  }
+});
 
 export default router

@@ -219,13 +219,25 @@ router.get('/agendamentos', authMiddleware, async (req, res) => {
 
     const idEmpresa = userQuery.rows[0].idempresa;
 
-    const agendamentosQuery = await dbConnection.query('SELECT * FROM Agendamento WHERE idEmpresa = $1', [idEmpresa]);
+    // Modificar a consulta para incluir o nome do cliente e o preço do campo
+    const agendamentosQuery = await dbConnection.query(`
+      SELECT a.id, a.idCampo, a.quantidadePessoas, a.idEmpresa, a.semana, a.horario, 
+             c.nomeReal AS nomeCliente, 
+             ce.preco AS precoCampo
+      FROM Agendamento a
+      JOIN Campos_da_Empresa ce ON a.idCampo = ce.id
+      JOIN Cliente c ON a.idCliente = c.id
+      WHERE a.idEmpresa = $1
+    `, [idEmpresa]);
 
     if (agendamentosQuery.rows.length === 0) {
       return res.status(404).json({ message: 'Nenhum agendamento encontrado para esta empresa' });
     }
 
-    res.status(200).json({ message: 'Agendamentos listados com sucesso', agendamentos: agendamentosQuery.rows });
+    res.status(200).json({ 
+      message: 'Agendamentos listados com sucesso', 
+      agendamentos: agendamentosQuery.rows 
+    });
   } catch (error) {
     console.error('Erro ao listar agendamentos:', error);
     res.status(500).json({ message: 'Erro ao listar agendamentos' });
