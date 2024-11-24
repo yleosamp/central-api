@@ -12,7 +12,6 @@ const router = Router()
 // Fazer o gerenciamento da empresa, as informações e criar um campo
 // TESTAR A ROTA
 
-// Rota para adicionar informações da empresa
 // Rota para atualizar informações da empresa
 router.put('/update-empresa', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -219,11 +218,12 @@ router.get('/agendamentos', authMiddleware, async (req, res) => {
 
     const idEmpresa = userQuery.rows[0].idempresa;
 
-    // Modificar a consulta para incluir o nome do cliente e o preço do campo
+    // Modificar a consulta para incluir o nome do cliente, preço e nome do campo
     const agendamentosQuery = await dbConnection.query(`
-      SELECT a.id, a.idCampo, a.quantidadePessoas, a.idEmpresa, a.semana, a.horario, 
+      SELECT a.id, a.idCampo, a.quantidadePessoas, a.idEmpresa, a.semana, a.horario, a.pago,
              c.nomeReal AS nomeCliente, 
-             ce.preco AS precoCampo
+             ce.preco AS precoCampo,
+             ce.nomeCampo
       FROM Agendamento a
       JOIN Campos_da_Empresa ce ON a.idCampo = ce.id
       JOIN Cliente c ON a.idCliente = c.id
@@ -354,6 +354,110 @@ router.get('/campos', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
+// Rota para atualizar informações do campo
+router.put('/atualizar-campo/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    if (!req.userAuthenticated) {
+      return res.status(401).json({ message: 'Usuário não autenticado' });
+    }
+
+    const campoId = req.params.id;
+    const { nomeCampo, preco, disponibilidade, tipoCampo } = req.body;
+
+    // Validar campos obrigatórios
+    if (!nomeCampo || preco === undefined || disponibilidade === undefined) {
+      return res.status(400).json({ 
+        message: 'Os campos nomeCampo, preco e disponibilidade são obrigatórios',
+        dadosRecebidos: req.body
+      });
+    }
+
+    // Converter disponibilidade para booleano
+    const disponibilidadeBoolean = disponibilidade === true || disponibilidade === 'true';
+
+    // Converter preço para número
+    const precoNumerico = Number(preco);
+    if (isNaN(precoNumerico)) {
+      return res.status(400).json({ message: 'O campo preco deve ser um número válido' });
+    }
+
+    const updateQuery = `
+      UPDATE Campos_da_Empresa 
+      SET nomeCampo = $1, 
+          preco = $2, 
+          disponibilidade = $3,
+          tipoCampo = $4
+      WHERE id = $5
+      RETURNING *
+    `;
+
+    const result = await dbConnection.query(updateQuery, [
+      nomeCampo,
+      precoNumerico,
+      disponibilidadeBoolean,
+      tipoCampo || null,
+      campoId
+    ]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Campo não encontrado' });
+    }
+
+    res.status(200).json({
+      message: 'Campo atualizado com sucesso',
+      campo: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Erro ao atualizar campo:', error);
+    res.status(500).json({ 
+      message: 'Erro ao atualizar informações do campo',
+      erro: error.message 
+    });
+  }
+});
+
+
+// Rota para atualizar o status de pagamento do agendamento
+router.put('/atualizar-pagamento', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    if (!req.userAuthenticated) {
+      return res.status(401).json({ message: 'Usuário não autenticado' });
+    }
+
+    const { idAgendamento, pago } = req.body;
+
+    if (!idAgendamento) {
+      return res.status(400).json({ message: 'ID do agendamento é obrigatório' });
+    }
+
+    if (typeof pago !== 'boolean') {
+      return res.status(400).json({ message: 'O campo pago deve ser true ou false' });
+    }
+
+    const updateQuery = `
+      UPDATE Agendamento 
+      SET pago = $2
+      WHERE id = $1
+      RETURNING *
+    `;
+
+    const result = await dbConnection.query(updateQuery, [idAgendamento, pago]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Agendamento não encontrado' });
+    }
+
+    res.status(200).json({ 
+      message: 'Status de pagamento atualizado com sucesso',
+      agendamento: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Erro ao atualizar status de pagamento:', error);
+    res.status(500).json({ message: 'Erro ao atualizar status de pagamento' });
+  }
+});
 
 
 export default router

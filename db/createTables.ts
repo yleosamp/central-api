@@ -65,7 +65,8 @@ const createTables = async () => {
         horario JSONB,
         quantidadePessoas INTEGER,
         idEmpresa INTEGER REFERENCES Empresa_Info(id),
-        semana TEXT
+        semana TEXT,
+        pago BOOLEAN
     );
 
     CREATE TABLE IF NOT EXISTS Estatisticas_do_Cliente (

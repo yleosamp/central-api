@@ -14,7 +14,13 @@ ALTER TABLE Agendamento RENAME COLUMN horario_temp TO horario;
 ALTER TABLE Agendamento
 ADD COLUMN idEmpresa INTEGER REFERENCES Empresa_Info(id);
 
+-- ADICIONAR COLUNA DE TIPO DE CAMPO NO CAMPO DA EMPRESA
 ALTER TABLE Campos_da_Empresa ADD COLUMN tipoCampo VARCHAR(50);
 
+-- ALTERAR O TIPO DA COLUNA CNPJ PARA VARCHAR(30)
 ALTER TABLE Empresa_Info
 ALTER COLUMN CNPJ TYPE VARCHAR(30);
+
+-- Adicionar a coluna PAGO com valor padrão false
+ALTER TABLE Agendamento
+ADD COLUMN pago BOOLEAN DEFAULT false;

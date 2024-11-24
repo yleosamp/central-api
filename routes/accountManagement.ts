@@ -247,7 +247,7 @@ router.get('/agendamentos', authMiddleware, async (req: Request, res: Response) 
 
     // Buscar os agendamentos do cliente
     const agendamentosQuery = await dbConnection.query(
-      `SELECT a.id, a.idCampo, a.quantidadePessoas, a.idEmpresa, a.semana, a.horario, 
+      `SELECT a.id, a.idCampo, a.quantidadePessoas, a.idEmpresa, a.semana, a.horario, a.pago,
               c.nomeReal AS nomeUsuario, 
               ce.nomeCampo, ce.preco, 
               e.nome AS nomeEmpresa
