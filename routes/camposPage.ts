@@ -9,8 +9,17 @@ const router = Router()
 router.get('/empresas', authMiddleware, async (req: Request, res: Response) => {
   try {
     const query = `
-      SELECT id, imagemBanner, nome, endereco
-      FROM Empresa_Info
+      SELECT 
+        e.id,
+        e.imagemBanner,
+        e.nome,
+        e.endereco,
+        (
+          SELECT MIN(preco)
+          FROM Campos_da_Empresa c
+          WHERE c.idEmpresa = e.id
+        ) as menorPreco
+      FROM Empresa_Info e
     `;
     const empresas = await dbConnection.query(query);
     res.json(empresas.rows);
@@ -24,7 +33,8 @@ router.get('/campos/:idEmpresa', async (req: Request, res: Response) => {
   try {
     const idEmpresa = req.params.idEmpresa;
     const query = `
-      SELECT id, nomeCampo, bannerCampo, preco, horarios
+      SELECT id, nomeCampo, bannerCampo, preco, horarios,
+      MIN(preco) OVER () as menorPreco
       FROM Campos_da_Empresa
       WHERE idEmpresa = $1
     `;

@@ -124,54 +124,14 @@ router.put('/update', authMiddleware, upload.single('fotoAvatar'), async (req: R
 router.delete('/delete', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = (req.userAuthenticated as JwtPayload).id;
-    const { requestDelete, codigo } = req.body;
 
-    // Buscar o email do usuário
-    const userQuery = await dbConnection.query(
-      'SELECT email FROM Login_Usuario WHERE id = $1',
-      [userId]
-    );
+    // Deletar a conta
+    await dbConnection.query('DELETE FROM Login_Usuario WHERE id = $1', [userId]);
+    await dbConnection.query('DELETE FROM Cliente WHERE id = $1', [userId]);
+    await dbConnection.query('DELETE FROM Estatisticas_do_Cliente WHERE idUsuario = $1', [userId]);
 
-    if (userQuery.rows.length === 0) {
-      return res.status(404).json({ message: 'Usuário não encontrado' });
-    }
+    return res.status(200).json({ message: 'Conta deletada com sucesso' });
 
-    const userEmail = userQuery.rows[0].email;
-
-    if (requestDelete === 1) {
-      // Gerar código de verificação
-      const codigoVerificacao = Math.floor(100000 + Math.random() * 900000).toString();
-
-      // Atualizar o código de verificação no banco de dados
-      await dbConnection.query(
-        'UPDATE Login_Usuario SET codigoVerificacao = $1 WHERE id = $2',
-        [codigoVerificacao, userId]
-      );
-
-      // Enviar o código por e-mail
-      await enviarEmail(userEmail, 'Confirmação de Exclusão de Conta', `Seu código de verificação para excluir a conta é: ${codigoVerificacao}`);
-
-      return res.status(200).json({ message: 'Código de verificação enviado para o email' });
-    } else if (codigo) {
-      // Verificar se o código fornecido está correto
-      const codeQuery = await dbConnection.query(
-        'SELECT codigoVerificacao FROM Login_Usuario WHERE id = $1',
-        [userId]
-      );
-
-      if (codeQuery.rows[0].codigoVerificacao !== codigo) {
-        return res.status(400).json({ message: 'Código de verificação incorreto' });
-      }
-
-      // Deletar a conta
-      await dbConnection.query('DELETE FROM Login_Usuario WHERE id = $1', [userId]);
-      await dbConnection.query('DELETE FROM Cliente WHERE id = $1', [userId]);
-      await dbConnection.query('DELETE FROM Estatisticas_do_Cliente WHERE idUsuario = $1', [userId]);
-
-      return res.status(200).json({ message: 'Conta deletada com sucesso' });
-    } else {
-      return res.status(400).json({ message: 'Requisição inválida' });
-    }
   } catch (error) {
     console.error('Erro ao deletar a conta:', error);
     res.status(500).json({ message: 'Erro ao processar a exclusão da conta' });
